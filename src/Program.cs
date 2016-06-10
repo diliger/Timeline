@@ -5,7 +5,9 @@ namespace Timeline {
     class Program {
         static void Main() {
             Handle.GET("/Timeline", () => {
-                return new IndexPage();
+                var p = new IndexPage();
+                p.Data = new object();
+                return p;
             });
         }
     }

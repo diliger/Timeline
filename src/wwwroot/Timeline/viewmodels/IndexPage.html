@@ -2,10 +2,16 @@
 <template>
     <template is="dom-bind">
         <div>
-            <h1>Home page!</h1>
+            <h1>
+                Home page!
+            </h1>
         </div>
 
-        <timeline-element name="Timeline-Name" description="Timeline-Description" ></timeline-element>
+        <div>
+            <button value="{{model.AddItem$::click}}" onclick="++this.value;" style="color:#a8aaff;background-color:#c6c6f0;">Add item!</button>
+        </div>
+
+        <timeline-element name="Timeline-Name" description="Timeline-Description" items="{{model.Dataset.Items}}" height="350" width="750"></timeline-element>
 
         <dom-bind-notifier path="model" observed-object="{{model}}" deep></dom-bind-notifier>
     </template>

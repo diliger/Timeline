@@ -1,9 +1,28 @@
 ﻿<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <dom-module id="timeline-element">
     <template>
+        <style>
+            svg {
+                padding: 20px;
+                background-color: #eaeaea;
+            }
+
+            rect:first-child {
+                fill-opacity: .6;
+            }
+
+            text.label {
+                text-anchor: middle;
+                font-family: sans-serif;
+                font-size: 11px;
+                font-weight: bold;
+                fill: white;
+                text-shadow: 0px 0px 10px rgba(10, 10, 10, 1);
+            }
+        </style>
         <p id="header">The <b>{{name}}</b> timeline.</p>
         <div id="chart">
-            
+
         </div>
     </template>
     <script>
@@ -13,17 +32,23 @@
             properties: {
                 name: { type: String },
                 description: { type: String },
-                values: {
-                    type: Array,
-                    observer: "valuesChanged"
+                width: { type: Number },
+                height: { type: Number },
+                color: { type: String, value: "#A8AAFF" },
+                items: {
+                    type: Array
                 }
             },
-            valuesChanged: function (newValue, oldValue) {
-
+            observers: ["itemsAddedOrRemoved(items.splices)"],
+            itemsAddedOrRemoved: function (changeRecord) {
+                setTimeout(function () {
+                    this.updateChart();
+                }.bind(this), 50);
             },
-            // add a callback to the element's prototype
-            attached: function () {
+            ready: function () {
                 this.attachedFired = true;
+                this.width = this.width || 600;
+                this.height = this.height || 250;
 
                 setTimeout(function () {
                     this.initChart();
@@ -32,113 +57,167 @@
             initChart: function () {
                 if (!this.attachedFired)
                     return;
+                var me = this;
+                //console.warn(me.color);
+                //Width and height
+                var w = this.width;
+                var h = this.height;
 
-                var w = 600;
-                var h = 250;
+                var key = me.key = function (d) {
+                    return d.Key;
+                };
+                var label = me.label = function (d) {
+                    if (d.Value > 0 && d.Predicted > 0)
+                        return d.Value + " (" + d.Predicted + "?)";
+                    else if (d.Value > 0)
+                        return d.Value;
+                    else if (d.Predicted > 0)
+                        return d.Predicted + "?";
+                    return "";
+                }
 
-                var dataset = [5, 10, 13, 19, 21, 25, 22, 18, 15, 13, 11, 12, 15, 20, 18, 17, 16, 18, 23, 25];
-
-                var xScale = d3.scale.ordinal()
-                                .domain(d3.range(dataset.length))
+                me.xScale = d3.scale.ordinal()
+                                .domain(d3.range(this.items.length))
                                 .rangeRoundBands([0, w], 0.05);
 
-                var yScale = d3.scale.linear()
-                                .domain([0, d3.max(dataset)])
+                me.yScale = d3.scale.linear()
+                                .domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })])
                                 .range([0, h]);
 
                 //Create SVG element
-                var svg = d3.select(this.$.chart)
+                var svg = me.svg = d3.select(this.$.chart)
                             .append("svg")
                             .attr("width", w)
                             .attr("height", h);
 
-                //Create bars
-                svg.selectAll("rect")
-                   .data(dataset)
+                var items = me.svg.selectAll(".item")
+                   .data(me.items, me.key)
                    .enter()
-                   .append("rect")
-                   .attr("x", function (d, i) {
-                       return xScale(i);
-                   })
+                   .append("g")
+                   .attr("class", "item")
+                   .attr("transform", function (d, i) { return "translate(" + me.xScale(i) + ",0)"; });
+
+                items.selectAll("rect")
+                   .data(function (d) { return [d.Predicted, d.Value]; })
+                   .enter().append("rect")
                    .attr("y", function (d) {
-                       return h - yScale(d);
+                       return h - me.yScale(d);
                    })
-                   .attr("width", xScale.rangeBand())
+                   .attr("width", me.xScale.rangeBand())
                    .attr("height", function (d) {
-                       return yScale(d);
+                       return me.yScale(d);
                    })
                    .attr("fill", function (d) {
-                       return "rgb(0, 0, " + (d * 10) + ")";
+                       return me.color;
                    });
 
                 //Create labels
-                svg.selectAll("text")
-                   .data(dataset)
+                items.selectAll("text")
+                   .data(function (d) { return [d]; })
                    .enter()
                    .append("text")
-                   .text(function (d) {
-                       return d;
-                   })
-                   .attr("text-anchor", "middle")
+                   .text(label)
                    .attr("x", function (d, i) {
-                       return xScale(i) + xScale.rangeBand() / 2;
+                       return me.xScale.rangeBand() / 2;
                    })
                    .attr("y", function (d) {
-                       return h - yScale(d) + 14;
+                       return h - me.yScale(Math.max(d.Predicted, d.Value)) - 5;
                    })
-                   .attr("font-family", "sans-serif")
-                   .attr("font-size", "11px")
-                   .attr("fill", "white");
+                   .attr("class", "label");
+                this.initialized = true;
+            },
+            updateChart: function () {
+                if (!this.initialized)
+                    return;
 
-                //On click, update with new data
-                d3.select(this.$.header)
-                    .on("click", function () {
+                var me = this;
+                //Width and height
+                var w = this.width;
+                var h = this.height;
 
-                        //New values for dataset
-                        var numValues = dataset.length;						//Count original length of dataset
-                        dataset = [];  						 				//Initialize empty array
-                        for (var i = 0; i < numValues; i++) {				//Loop numValues times
-                            var newNumber = Math.floor(Math.random() * 25); //New random integer (0-25)
-                            dataset.push(newNumber);			 			//Add new number to array
-                        }
+                //Update scale domain
+                me.yScale.domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })])
+                me.xScale.domain(d3.range(me.items.length));
 
-                        //Update all rects
-                        svg.selectAll("rect")
-                           .data(dataset)
-                           .transition()
-                           .delay(function (d, i) {
-                               return i / dataset.length * 1000;
-                           })
-                           .duration(500)
-                           .attr("y", function (d) {
-                               return h - yScale(d);
-                           })
-                           .attr("height", function (d) {
-                               return yScale(d);
-                           })
-                           .attr("fill", function (d) {
-                               return "rgb(0, 0, " + (d * 10) + ")";
-                           });
+                var items = me.svg.selectAll(".item")
+                   .data(me.items, me.key)
+                   .attr("transform", function (d, i) { return "translate(" + me.xScale(i) + ",0)"; });
 
-                        //Update all labels
-                        svg.selectAll("text")
-                           .data(dataset)
-                           .transition()
-                           .delay(function (d, i) {
-                               return i / dataset.length * 1000;
-                           })
-                           .duration(500)
-                           .text(function (d) {
-                               return d;
-                           })
-                           .attr("x", function (d, i) {
-                               return xScale(i) + xScale.rangeBand() / 2;
-                           })
-                           .attr("y", function (d) {
-                               return h - yScale(d) + 14;
-                           });
+                items.enter()
+                   .append("g")
+                   .attr("class", "item")
+                   .attr("transform", function (d, i) { return "translate(" + me.xScale(i) + ",0)"; });
+                
+                //Exit…
+                items.exit()
+                    .transition()
+                    .duration(500)
+                    .attr("transform", function (d, i) { return "translate(" + -me.xScale.rangeBand() + ",0)"; })  // <-- Exit stage left
+                    .remove();
+                
+                items.selectAll("rect")
+                   .data(function (d) { return [d.Predicted, d.Value]; })
+                   .enter().append("rect")
+                   .attr("y", function (d) {
+                       return h - me.yScale(d);
+                   })
+                   .attr("width", me.xScale.rangeBand())
+                   .attr("height", function (d) {
+                       return me.yScale(d);
+                   })
+                   .attr("fill", function (d) {
+                       return me.color;
+                   });
 
-                    });
+                items.selectAll("rect")
+                    .attr("width", me.xScale.rangeBand())
+                    .transition()
+                    .duration(500)
+                    .attr("y", function (d) {
+                        return h - me.yScale(d);
+                    })
+                   .attr("height", function (d) {
+                       return me.yScale(d);
+                   })
+                   .attr("fill", function (d) {
+                       return me.color;
+                   });
+
+                ////Update all labels
+                var labels = items.selectAll("text")
+                   .data(function (d) { return [d]; });
+
+                ////Exit…
+                labels.exit()
+                    .transition()
+                    .duration(500)
+                    .attr("x", -me.xScale.rangeBand())  // <-- Exit stage left
+                    .remove();
+
+                labels.enter()
+                   .append("text")
+                   .text(me.label)
+                   .attr("x", function (d, i) {
+                       return me.xScale.rangeBand() / 2;
+                   })
+                   .attr("y", function (d) {
+                       return h - me.yScale(Math.max(d.Predicted, d.Value)) - 5;
+                   })
+                   .attr("class", "label");
+
+                labels
+                   .attr("x", function (d, i) {
+                       return me.xScale.rangeBand() / 2;
+                   })
+                   .transition()
+                   //.delay(function (d, i) {
+                   //    return i / dataset.length * 1000;
+                   //})
+                   .duration(500)
+                   .text(me.label)
+                   .attr("y", function (d) {
+                       return h - me.yScale(Math.max(d.Predicted, d.Value)) - 5;
+                   });
             }
         });
     </script>

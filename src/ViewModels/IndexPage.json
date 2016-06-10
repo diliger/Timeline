@@ -1,3 +1,8 @@
 {
-    "Html":  "/Timeline/viewmodels/IndexPage.html"
+    "Html": "/Timeline/viewmodels/IndexPage.html",
+    "Dataset": {
+        "Items": [ { "Key": 0, "Value": 0, "Predicted": 0 } ],
+        "Events": [ { "Name": "", "Type": "", "From": 0.0, "To": 0.0 } ]
+    },
+    "AddItem$": 0
 }
