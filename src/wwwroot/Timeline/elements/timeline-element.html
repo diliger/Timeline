@@ -7,8 +7,12 @@
                 background-color: #eaeaea;
             }
 
-            rect:first-child {
+            .item rect:first-child {
                 fill-opacity: .6;
+            }
+
+            .event rect.bar {
+                fill-opacity: .5;
             }
 
             text.label {
@@ -18,6 +22,14 @@
                 font-weight: bold;
                 fill: white;
                 text-shadow: 0px 0px 10px rgba(10, 10, 10, 1);
+            }
+
+            g.event.critical rect.bar {
+                fill: rgba(255, 0, 0, 0.50);
+            }
+
+            g.event text {
+                fill: white;
             }
         </style>
         <p id="header">The <b>{{name}}</b> timeline.</p>
@@ -37,10 +49,28 @@
                 color: { type: String, value: "#A8AAFF" },
                 items: {
                     type: Array
+                },
+                events: {
+                    type: Array
                 }
             },
-            observers: ["itemsAddedOrRemoved(items.splices)"],
+            observers: ["itemsAddedOrRemoved(items.splices)", "itemsChanged(items.*)", "eventsAddedOrRemoved(events.splices)", "eventsChanged(events.*)"],
+            itemsChanged: function (changeRecord) {
+                setTimeout(function () {
+                    this.updateChart();
+                }.bind(this), 50);
+            },
             itemsAddedOrRemoved: function (changeRecord) {
+                setTimeout(function () {
+                    this.updateChart();
+                }.bind(this), 50);
+            },
+            eventsChanged: function (changeRecord) {
+                setTimeout(function () {
+                    this.updateChart();
+                }.bind(this), 50);
+            },
+            eventsAddedOrRemoved: function (changeRecord) {
                 setTimeout(function () {
                     this.updateChart();
                 }.bind(this), 50);
@@ -58,44 +88,53 @@
                 if (!this.attachedFired)
                     return;
                 var me = this;
-                //console.warn(me.color);
+                //console.warn(me.events);
                 //Width and height
+                var footer = 150;
                 var w = this.width;
-                var h = this.height;
+                var h = this.height - footer;
 
                 var key = me.key = function (d) {
                     return d.Key;
                 };
                 var label = me.label = function (d) {
+                    var prefix = d.Key + ": ";
                     if (d.Value > 0 && d.Predicted > 0)
-                        return d.Value + " (" + d.Predicted + "?)";
+                        return prefix + d.Value + " (" + d.Predicted + "?)";
                     else if (d.Value > 0)
-                        return d.Value;
+                        return prefix + d.Value;
                     else if (d.Predicted > 0)
-                        return d.Predicted + "?";
-                    return "";
+                        return prefix + d.Predicted + "?";
+                    return prefix + "";
                 }
 
                 me.xScale = d3.scale.ordinal()
-                                .domain(d3.range(this.items.length))
-                                .rangeRoundBands([0, w], 0.05);
+                                .domain(d3.range(1, d3.max(this.items, function (d) { return d.Key; }) + 1))
+                                .rangeRoundBands([0, w], 0.02);
+
+                me.xEventScale = d3.scale.linear()
+                                .domain([0, d3.max(this.items, function (d) { return d.Key; })])
+                                .range([0, w]);
 
                 me.yScale = d3.scale.linear()
                                 .domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })])
                                 .range([0, h]);
 
+                me.eventXFrom = function (d, i) { return d.From % 1 == 0 ? me.xScale(d.From + 1) : me.xEventScale(d.From); };
+                me.eventXTo = function (d, i) { return d.To % 1 == 0 ? me.xScale(d.To) + me.xScale.rangeBand() : me.xEventScale(d.To); };
+
                 //Create SVG element
                 var svg = me.svg = d3.select(this.$.chart)
                             .append("svg")
                             .attr("width", w)
-                            .attr("height", h);
+                            .attr("height", this.height);
 
                 var items = me.svg.selectAll(".item")
                    .data(me.items, me.key)
                    .enter()
                    .append("g")
                    .attr("class", "item")
-                   .attr("transform", function (d, i) { return "translate(" + me.xScale(i) + ",0)"; });
+                   .attr("transform", function (d, i) { return "translate(" + me.xScale(d.Key) + ",0)"; });
 
                 items.selectAll("rect")
                    .data(function (d) { return [d.Predicted, d.Value]; })
@@ -124,6 +163,46 @@
                        return h - me.yScale(Math.max(d.Predicted, d.Value)) - 5;
                    })
                    .attr("class", "label");
+
+                var events = me.svg.selectAll(".event")
+                   .data(me.events)
+                   .enter()
+                   .append("g")
+                   .attr("class", function (d) {
+                       return "event " + (d.Type || "").toLowerCase();
+                   })
+                   .attr("transform", function (d, i) { return "translate(" + me.eventXFrom(d) + ",0)"; });
+
+                events.append("rect")
+                   .attr("y", 0)
+                   .attr("class", "bar")
+                   .attr("width", function (d) {
+                       return me.eventXTo(d) - me.eventXFrom(d);
+                   })
+                   .attr("height", h + footer / 2)
+                   .attr("fill", "#a3a3a3");
+
+                events = events.append("g")
+                   .attr("class", "label")
+                   .attr("transform", function (d, i) { return "translate(0," + (h + footer / 2) + ")"; });
+
+                events.append("rect")
+                   .attr("class", "label")
+                   //.attr("y", h + footer / 2)
+                   .attr("width", function (d) {
+                       return me.eventXTo(d) - me.eventXFrom(d);
+                   })
+                   .attr("height", footer / 8)
+                   .attr("fill", "#70707f");
+
+                events.append("text")
+                   .attr("class", "label")
+                   .attr("x", function (d) {
+                       return (me.eventXTo(d) - me.eventXFrom(d)) / 2;
+                   })
+                   .attr("y", "1.2em")
+                   .text(function (d) { return d.Name; });
+
                 this.initialized = true;
             },
             updateChart: function () {
@@ -132,29 +211,31 @@
 
                 var me = this;
                 //Width and height
+                var footer = 150;
                 var w = this.width;
-                var h = this.height;
+                var h = this.height - footer;
 
                 //Update scale domain
                 me.yScale.domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })])
-                me.xScale.domain(d3.range(me.items.length));
+                me.xScale.domain(d3.range(1, d3.max(this.items, function (d) { return d.Key; }) + 1));
+                me.xEventScale.domain([0, d3.max(this.items, function (d) { return d.Key; })])
 
                 var items = me.svg.selectAll(".item")
                    .data(me.items, me.key)
-                   .attr("transform", function (d, i) { return "translate(" + me.xScale(i) + ",0)"; });
+                   .attr("transform", function (d, i) { return "translate(" + me.xScale(d.Key) + ",0)"; });
 
                 items.enter()
                    .append("g")
                    .attr("class", "item")
-                   .attr("transform", function (d, i) { return "translate(" + me.xScale(i) + ",0)"; });
-                
+                   .attr("transform", function (d, i) { return "translate(" + me.xScale(d.Key) + ",0)"; });
+
                 //Exit…
                 items.exit()
                     .transition()
                     .duration(500)
                     .attr("transform", function (d, i) { return "translate(" + -me.xScale.rangeBand() + ",0)"; })  // <-- Exit stage left
                     .remove();
-                
+
                 items.selectAll("rect")
                    .data(function (d) { return [d.Predicted, d.Value]; })
                    .enter().append("rect")
@@ -205,10 +286,9 @@
                    })
                    .attr("class", "label");
 
-                labels
-                   .attr("x", function (d, i) {
-                       return me.xScale.rangeBand() / 2;
-                   })
+                labels.attr("x", function (d, i) {
+                    return me.xScale.rangeBand() / 2;
+                })
                    .transition()
                    //.delay(function (d, i) {
                    //    return i / dataset.length * 1000;
@@ -218,6 +298,80 @@
                    .attr("y", function (d) {
                        return h - me.yScale(Math.max(d.Predicted, d.Value)) - 5;
                    });
+
+                var events = me.svg.selectAll(".event")
+                    .data(me.events);
+
+                events.exit()
+                    //.transition()
+                    //.duration(500)
+                    //.attr("x", 0)  // <-- Exit stage left
+                    .remove();
+
+                var newEvents = events.enter()
+                   .append("g")
+                   .attr("class", function (d) {
+                       return "event " + (d.Type || "").toLowerCase();
+                   })
+                   .attr("transform", function (d, i) { return "translate(" + me.eventXFrom(d) + ",0)"; });
+
+                newEvents.append("rect")
+                   .attr("y", 0)
+                    .attr("class", "bar")
+                   .attr("width", function (d) {
+                       return me.eventXTo(d) - me.eventXFrom(d);
+                   })
+                   .attr("height", h + footer / 2)
+                   .attr("fill", "#a3a3a3");
+                
+                newEvents = newEvents.append("g")
+                   .attr("class", "label")
+                   .attr("transform", function (d, i) { return "translate(0," + (h + footer / 2) + ")"; });
+
+                newEvents.append("rect")
+                   .attr("class", "label")
+                   //.attr("y", h + footer / 2)
+                   .attr("width", function (d) {
+                       return me.eventXTo(d) - me.eventXFrom(d);
+                   })
+                   .attr("height", footer / 8)
+                   .attr("fill", "#70707f");
+
+                newEvents.append("text")
+                   .attr("class", "label")
+                   .attr("x", function (d) {
+                       return (me.eventXTo(d) - me.eventXFrom(d)) / 2;
+                   })
+                   .attr("y", "1.2em")
+                   .text(function (d) { return d.Name; });
+
+                events
+                   .attr("class", function (d) {
+                       return "event " + (d.Type || "").toLowerCase();
+                   })
+                   .attr("transform", function (d, i) { return "translate(" + me.eventXFrom(d) + ",0)"; })
+
+                   .select("rect")
+                   .attr("y", 0)
+                   .attr("width", function (d) {
+                       return me.eventXTo(d) - me.eventXFrom(d);
+                   })
+                   .attr("height", h + footer / 2)
+                   .attr("fill", "#a3a3a3");
+
+                events.select("rect.label")
+                   .attr("width", function (d) {
+                       return me.eventXTo(d) - me.eventXFrom(d);
+                   })
+                   .attr("height", footer / 8)
+                   .attr("fill", "#70707f");
+
+                events.select("text.label")
+                   .attr("x", function (d) {
+                       return (me.eventXTo(d) - me.eventXFrom(d)) / 2;
+                   })
+                   .attr("y", "1.2em")
+                   .text(function (d) { return d.Name; });
             }
         });
     </script>

@@ -1,4 +1,13 @@
 ﻿<link rel="import" href="/Timeline/elements/timeline-element.html">
+<style>
+    button {
+        width: 150px;
+        margin-right: 15px;
+        -moz-border-radius: 3px;
+        -webkit-border-radius: 3px;
+        border-radius: 3px;
+    }
+</style>
 <template>
     <template is="dom-bind">
         <div>
@@ -8,10 +17,18 @@
         </div>
 
         <div>
-            <button value="{{model.AddItem$::click}}" onclick="++this.value;" style="color:#a8aaff;background-color:#c6c6f0;">Add item!</button>
+            <button value="{{model.RemoveItem$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Remove item!</button>
+            <button value="{{model.UpdateItem$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Update item!</button>
+            <button value="{{model.AddItem$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Add item!</button>
+        </div>
+        <br/>
+        <div>
+            <button value="{{model.RemoveEvent$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Remove event!</button>
+            <button value="{{model.UpdateEvent$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Update event!</button>
+            <button value="{{model.AddEvent$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Add event!</button>
         </div>
 
-        <timeline-element name="Timeline-Name" description="Timeline-Description" items="{{model.Dataset.Items}}" height="350" width="750"></timeline-element>
+        <timeline-element name="Timeline-Name" description="Timeline-Description" items="{{model.Dataset.Items}}" events="{{model.Dataset.Events}}" height="350" width="750"></timeline-element>
 
         <dom-bind-notifier path="model" observed-object="{{model}}" deep></dom-bind-notifier>
     </template>

@@ -4,5 +4,10 @@
         "Items": [ { "Key": 0, "Value": 0, "Predicted": 0 } ],
         "Events": [ { "Name": "", "Type": "", "From": 0.0, "To": 0.0 } ]
     },
-    "AddItem$": 0
+    "AddItem$": 0,
+    "RemoveItem$": 0,
+    "UpdateItem$": 0,
+    "AddEvent$": 0,
+    "RemoveEvent$": 0,
+    "UpdateEvent$": 0
 }
