@@ -15,7 +15,7 @@
                 fill-opacity: .5;
             }
 
-            text.label {
+            text.label, .tick text {
                 text-anchor: middle;
                 font-family: sans-serif;
                 font-size: 11px;
@@ -30,6 +30,17 @@
 
             g.event text {
                 fill: white;
+            }
+
+            .axis path,
+            .axis line {
+                fill: none;
+                stroke: #000;
+                shape-rendering: crispEdges;
+            }
+
+            .x.axis path {
+                display: none;
             }
         </style>
         <p id="header">The <b>{{name}}</b> timeline.</p>
@@ -123,11 +134,21 @@
                 me.eventXFrom = function (d, i) { return d.From % 1 == 0 ? me.xScale(d.From + 1) : me.xEventScale(d.From); };
                 me.eventXTo = function (d, i) { return d.To % 1 == 0 ? me.xScale(d.To) + me.xScale.rangeBand() : me.xEventScale(d.To); };
 
+                me.xAxis = d3.svg.axis()
+                    .scale(me.xScale)
+                    .tickFormat(function (d) { return "w" + d; })
+                    .orient("bottom");
+
                 //Create SVG element
                 var svg = me.svg = d3.select(this.$.chart)
                             .append("svg")
                             .attr("width", w)
                             .attr("height", this.height);
+
+                svg.append("g")
+                  .attr("class", "x axis")
+                  .attr("transform", "translate(0," + h + ")")
+                  .call(me.xAxis);
 
                 var items = me.svg.selectAll(".item")
                    .data(me.items, me.key)
@@ -216,9 +237,15 @@
                 var h = this.height - footer;
 
                 //Update scale domain
-                me.yScale.domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })])
+                me.yScale.domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })]);
                 me.xScale.domain(d3.range(1, d3.max(this.items, function (d) { return d.Key; }) + 1));
-                me.xEventScale.domain([0, d3.max(this.items, function (d) { return d.Key; })])
+                me.xEventScale.domain([0, d3.max(this.items, function (d) { return d.Key; })]);
+                
+                //Update x-axis
+                me.svg.select(".x.axis")
+                    //.transition()
+                    //.duration(1000)
+                    .call(me.xAxis);
 
                 var items = me.svg.selectAll(".item")
                    .data(me.items, me.key)
@@ -323,7 +350,7 @@
                    })
                    .attr("height", h + footer / 2)
                    .attr("fill", "#a3a3a3");
-                
+
                 newEvents = newEvents.append("g")
                    .attr("class", "label")
                    .attr("transform", function (d, i) { return "translate(0," + (h + footer / 2) + ")"; });
