@@ -9,14 +9,18 @@ namespace Timeline {
 
         protected override void OnData() {
             base.OnData();
-            Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Count, r.Next(max), r.Next(max));
-            Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Count, r.Next(max), r.Next(max));
-            Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Count, r.Next(max), r.Next(max));
+            for (int i = 0; i < 15; i++) {
+                Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Count, r.Next(max), r.Next(max));
+            }
 
-            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event" + (Dataset.Events.Count + 1), "Normal", 0M, 1M);
-            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event AAA " + (Dataset.Events.Count + 1), "Critical", 1.7M, 2M);
-            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event BB" + (Dataset.Events.Count + 1), "Normal", 2.1M, 2.3M);
-            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event CCCC " + (Dataset.Events.Count + 1), "Normal", 2.5M, 2.5M);
+            AddTimelineEvent();
+            AddTimelineEvent();
+            AddTimelineEvent();
+
+            //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event" + (Dataset.Events.Count + 1), "Normal", 0M, 1M);
+            //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event AAA " + (Dataset.Events.Count + 1), "Critical", 1.7M, 2M);
+            //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event BB" + (Dataset.Events.Count + 1), "Normal", 2.1M, 2.3M);
+            //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event CCCC " + (Dataset.Events.Count + 1), "Normal", 2.5M, 2.5M);
         }
 
         void Handle(Input.AddItem action) {
@@ -49,10 +53,7 @@ namespace Timeline {
         }
 
         void Handle(Input.AddEvent action) {
-            int max = (int)Dataset.Items.Max(val => val.Key);
-            decimal from = r.Next(max * 10) / 10M;
-            string eventType = r.Next(this.max) % 2 == 0 ? "Normal" : "Critical";
-            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Events.Count, "Event" + Dataset.Events.Count, eventType, from, r.Next((int)(from * 10), max * 10) / 10M);
+            AddTimelineEvent();
         }
 
         void Handle(Input.RemoveEvent action) {
@@ -79,6 +80,13 @@ namespace Timeline {
             item.Type = eventType;
             item.To = r.Next((int)(from * 10), max * 10) / 10M;
             item.Name = "Event" + DateTime.Now.Second;
+        }
+
+        private void AddTimelineEvent() {
+            int max = (int)Dataset.Items.Max(val => val.Key);
+            decimal from = r.Next(max * 10) / 10M;
+            string eventType = r.Next(this.max) % 2 == 0 ? "Normal" : "Critical";
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Events.Count, "Event" + Dataset.Events.Count, eventType, from, r.Next((int)from * 10, (int)Math.Min((int)(from * 10 * 2), max * 10)) / 10M);
         }
     }
 
