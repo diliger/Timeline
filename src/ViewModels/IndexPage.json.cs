@@ -13,13 +13,20 @@ namespace Timeline {
             Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Count, r.Next(max), r.Next(max));
             Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Count, r.Next(max), r.Next(max));
 
-            Dataset.Events.Add().Data = new TimelineEvent("Event" + (Dataset.Events.Count + 1), "Normal", 0M, 1M);
-            Dataset.Events.Add().Data = new TimelineEvent("Event" + (Dataset.Events.Count + 1), "Critical", 1.7M, 2M);
-            Dataset.Events.Add().Data = new TimelineEvent("Event" + (Dataset.Events.Count + 1), "Normal", 2.1M, 2.3M);
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event" + (Dataset.Events.Count + 1), "Normal", 0M, 1M);
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event AAA " + (Dataset.Events.Count + 1), "Critical", 1.7M, 2M);
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event BB" + (Dataset.Events.Count + 1), "Normal", 2.1M, 2.3M);
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event CCCC " + (Dataset.Events.Count + 1), "Normal", 2.5M, 2.5M);
         }
 
         void Handle(Input.AddItem action) {
-            Dataset.Items.Add().Data = new TimelineItem(Dataset.Items.Max(val => val.Key) + 1, r.Next(max), r.Next(max));
+            var item = new TimelineItem(Dataset.Items.Max(val => val.Key) + 1, r.Next(max), r.Next(max));
+            if (item.Predicted % 2 != 0) {
+                item.Predicted = 0;
+            } else if (item.Value % 2 != 0) {
+                item.Value = 0;
+            }
+            Dataset.Items.Add().Data = item;
         }
 
         void Handle(Input.RemoveItem action) {
@@ -45,7 +52,7 @@ namespace Timeline {
             int max = (int)Dataset.Items.Max(val => val.Key);
             decimal from = r.Next(max * 10) / 10M;
             string eventType = r.Next(this.max) % 2 == 0 ? "Normal" : "Critical";
-            Dataset.Events.Add().Data = new TimelineEvent("Event" + Dataset.Events.Count, eventType, from, r.Next((int)(from * 10), max * 10) / 10M);
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Events.Count, "Event" + Dataset.Events.Count, eventType, from, r.Next((int)(from * 10), max * 10) / 10M);
         }
 
         void Handle(Input.RemoveEvent action) {
@@ -92,13 +99,15 @@ namespace Timeline {
     public class TimelineEvent {
         public TimelineEvent() { }
 
-        public TimelineEvent(string Name, string Type, decimal From, decimal To) {
+        public TimelineEvent(long Key, string Name, string Type, decimal From, decimal To) {
+            this.Key = Key;
             this.Name = Name;
             this.Type = Type;
             this.From = From;
             this.To = To;
         }
 
+        public long Key;
         public string Name;
         public string Type;
         public decimal From;
