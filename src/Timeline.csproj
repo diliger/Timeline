@@ -73,6 +73,7 @@
     </TypedJSON>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="wwwroot\sys\d3.html" />
     <Content Include="wwwroot\Timeline\elements\timeline-element.html" />
     <Content Include="wwwroot\Timeline\viewmodels\IndexPage.html" />
   </ItemGroup>

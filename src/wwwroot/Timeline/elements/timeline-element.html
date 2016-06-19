@@ -1,17 +1,7 @@
-﻿<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+﻿<link rel="import" href="/sys/d3.html">
 <dom-module id="timeline-element">
     <template>
         <style>
-            /*g.event.critical rect.bar {
-                fill: rgba(255, 0, 0, 0.50);
-            }*/
-
-            /*.axis path,
-            .axis line {
-                fill: none;
-                stroke: #000;
-                shape-rendering: crispEdges;
-            }*/
         </style>
         <p id="header">The <b>{{name}}</b> timeline.</p>
         <div id="chart">
@@ -19,7 +9,6 @@
         </div>
     </template>
     <script>
-        // register a new element called proto-element
         Polymer({
             is: "timeline-element",
             properties: {
@@ -27,6 +16,7 @@
                 description: { type: String },
                 width: { type: Number },
                 height: { type: Number },
+                footerHeight: { type: Number },
                 color: { type: String, value: "#A8AAFF" },
                 items: {
                     type: Array
@@ -35,13 +25,8 @@
                     type: Array
                 }
             },
-            observers: ["itemsAddedOrRemoved(items.splices)", "itemsChanged(items.*)", "eventsAddedOrRemoved(events.splices)", "eventsChanged(events.*)"],
+            observers: ["itemsChanged(items.*)", "eventsChanged(events.*)"],
             itemsChanged: function (changeRecord) {
-                setTimeout(function () {
-                    this.updateChart();
-                }.bind(this), 50);
-            },
-            itemsAddedOrRemoved: function (changeRecord) {
                 setTimeout(function () {
                     this.updateChart();
                 }.bind(this), 50);
@@ -51,43 +36,42 @@
                     this.updateChart();
                 }.bind(this), 50);
             },
-            eventsAddedOrRemoved: function (changeRecord) {
-                setTimeout(function () {
-                    this.updateChart();
-                }.bind(this), 50);
-            },
             ready: function () {
                 this.attachedFired = true;
                 this.width = this.width || 600;
                 this.height = this.height || 250;
+                this.footerHeight = this.footerHeight || 150;
+                this.innerWidth = this.width - 40;
+                this.innerHeight = this.height - 40;
+                this.graphHeight = this.innerHeight - this.footerHeight;
 
                 setTimeout(function () {
                     this.initChart();
                 }.bind(this), 50);
             },
-            labelStyle: "text-anchor: middle;" +
-                        "font-family: sans-serif;" +
-                        "font-size: 13px;" +
-                        "font-weight: bold;" +
-                        "fill: white;" +
-                        "text-shadow: 0px 0px 10px rgba(10, 10, 10, 1);",
-            axisLabelStyle: "fill: white;" +
-                            "stroke: #FFF;" +
-                            "shape-rendering: crispEdges;",
+            labelStyle: ["text-anchor: middle;",
+                        "font-family: sans-serif;",
+                        "font-size: 13px;",
+                        "font-weight: bold;",
+                        "fill: white;",
+                        "text-shadow: 0px 0px 10px rgba(10, 10, 10, 1);"].join(""),
+            axisLabelStyle: ["fill: white;",
+                            "stroke: #FFF;",
+                            "shape-rendering: crispEdges;"].join(""),
             initChart: function () {
                 if (!this.attachedFired)
                     return;
-                var me = this;
-                //console.warn(me.events);
-                //Width and height
-                var footer = 150;
-                var w = this.width - 40;
-                var h = this.height - footer - 40;
+                var that = this;
 
-                var key = me.key = function (d) {
+                //Width and height
+                var footer = that.footerHeight;
+                var w = that.innerWidth;
+                var h = that.graphHeight;
+
+                var key = that.key = function (d) {
                     return d.Key;
                 };
-                var label = me.label = function (d) {
+                var label = that.label = function (d) {
                     var prefix = "";// d.Key + ": ";
                     if (d.Value > 0 && d.Predicted > 0)
                         return prefix + '<tspan dy="-1.2em">' + d.Value + '</tspan> <tspan dy="1.2em">(' + d.Predicted + "?)</tspan>";
@@ -98,28 +82,28 @@
                     return prefix + "";
                 }
 
-                me.xScale = d3.scale.ordinal()
+                that.xScale = d3.scale.ordinal()
                                 .domain(d3.range(1, d3.max(this.items, function (d) { return d.Key; }) + 1))
                                 .rangeRoundBands([0, w], 0.02);
 
-                xEventScale = me.xEventScale = d3.scale.linear()
+                xEventScale = that.xEventScale = d3.scale.linear()
                                 .domain([0, d3.max(this.items, function (d) { return d.Key * 1; })])
                                 .range([0, w]);
 
-                me.yScale = d3.scale.linear()
+                that.yScale = d3.scale.linear()
                                 .domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })])
                                 .range([0, h]);
 
-                me.eventXFrom = function (d, i) { return d.From % 1 == 0 ? me.xScale(d.From + 1) : me.xEventScale(d.From); };
-                me.eventXTo = function (d, i) { return d.To % 1 == 0 ? me.xScale(d.To) + me.xScale.rangeBand() : me.xEventScale(d.To); };
+                that.eventXFrom = function (d, i) { return d.From % 1 == 0 ? that.xScale(d.From + 1) : that.xEventScale(d.From); };
+                that.eventXTo = function (d, i) { return d.To % 1 == 0 ? that.xScale(d.To) + that.xScale.rangeBand() : that.xEventScale(d.To); };
 
-                me.xAxis = d3.svg.axis()
-                    .scale(me.xScale)
+                that.xAxis = d3.svg.axis()
+                    .scale(that.xScale)
                     .tickFormat(function (d) { return "w" + d; })
                     .orient("bottom");
 
                 //Create SVG element
-                var svg = me.svg = d3.select(this.$.chart)
+                var svg = that.svg = d3.select(this.$.chart)
                             .append("svg")
                             .attr("width", this.width)
                             .attr("style", "padding: 20px; background-color: #eaeaea;")
@@ -128,20 +112,20 @@
                 var axis = svg.append("g")
                    .attr("class", "x axis")
                    .attr("transform", "translate(0," + (h + 20) + ")")
-                   .call(me.xAxis);
+                   .call(that.xAxis);
 
                 axis.select("path")
                 .style("display", "none");
 
                 axis.selectAll(".tick line")
-                .attr("style", me.axisLabelStyle);
+                .attr("style", that.axisLabelStyle);
 
                 axis.selectAll(".tick text")
-                .attr("style", me.labelStyle);
+                .attr("style", that.labelStyle);
 
-                me.itemsEnter();
+                that.itemsEnter();
 
-                me.eventsEnter();
+                that.eventsEnter();
 
                 this.initialized = true;
             },
@@ -149,44 +133,44 @@
                 if (!this.initialized)
                     return;
 
-                var me = this;
+                var that = this;
                 //Width and height
-                var footer = 150;
-                var w = this.width - 40;
-                var h = this.height - footer - 40;
+                var footer = that.footerHeight;
+                var w = that.innerWidth;
+                var h = that.graphHeight;
 
                 //Update scale domain
-                me.yScale.domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })]);
-                me.xScale.domain(d3.range(1, d3.max(this.items, function (d) { return d.Key; }) + 1));
-                me.xEventScale.domain([0, d3.max(this.items, function (d) { return d.Key; })]);
+                that.yScale.domain([0, d3.max(this.items, function (d) { return Math.max(d.Predicted, d.Value); })]);
+                that.xScale.domain(d3.range(1, d3.max(this.items, function (d) { return d.Key; }) + 1));
+                that.xEventScale.domain([0, d3.max(this.items, function (d) { return d.Key; })]);
 
                 //Update x-axis
-                var axis = me.svg.select(".x.axis")
-                   .call(me.xAxis);
+                var axis = that.svg.select(".x.axis")
+                   .call(that.xAxis);
 
                 axis.select("path")
                 .style("display", "none");
 
                 axis.selectAll(".tick line")
-                .attr("style", me.axisLabelStyle);
+                .attr("style", that.axisLabelStyle);
 
                 axis.selectAll(".tick text")
-                .attr("style", me.labelStyle);
+                .attr("style", that.labelStyle);
 
-                var items = me.svg.selectAll(".item")
-                  .data(me.items, me.key);
+                var items = that.svg.selectAll(".item")
+                  .data(that.items, that.key);
 
                 //Exit…
                 items.exit()
                     .transition()
                     .duration(500)
-                    .attr("transform", function (d, i) { return "translate(" + -me.xScale.rangeBand() + ",0)"; })  // <-- Exit stage left
+                    .attr("transform", function (d, i) { return "translate(" + -that.xScale.rangeBand() + ",0)"; })  // <-- Exit stage left
                     .remove();
 
-                me.itemsEnter();
+                that.itemsEnter();
 
-                var events = me.svg.selectAll(".event")
-                    .data(me.events);
+                var events = that.svg.selectAll(".event")
+                    .data(that.events, that.key);
 
                 events.exit()
                     //.transition()
@@ -194,18 +178,18 @@
                     //.attr("x", 0)  // <-- Exit stage left
                     .remove();
 
-                me.eventsEnter();
+                that.eventsEnter();
 
             },
             itemsEnter: function () {
-                var me = this;
+                var that = this;
                 //Width and height
-                var footer = 150;
-                var w = this.width - 40;
-                var h = this.height - footer - 40;
+                var footer = that.footerHeight;
+                var w = that.innerWidth;
+                var h = that.graphHeight;
 
-                var items = me.svg.selectAll(".item")
-                   .data(me.items, me.key)
+                var items = that.svg.selectAll(".item")
+                   .data(that.items, that.key)
                    .enter()
                    .append("g")
                    .attr("class", "item");
@@ -220,71 +204,77 @@
                 items.append("text")
                    .attr("class", "label");
 
-                me.itemsUpdate();
+                that.itemsUpdate();
             },
             itemsUpdate: function () {
-                var me = this;
+                var that = this;
                 //Width and height
-                var footer = 150;
-                var w = this.width - 40;
-                var h = this.height - footer - 40;
+                var footer = that.footerHeight;
+                var w = that.innerWidth;
+                var h = that.graphHeight;
 
-                var items = me.svg.selectAll(".item")
-                   .data(me.items, me.key)
+                var items = that.svg.selectAll(".item")
+                   //.data(that.items, that.key)
                    .attr("class", "item")
-                   .attr("transform", function (d, i) { return "translate(" + me.xScale(d.Key) + ",0)"; });
+                   .attr("transform", function (d, i) { return "translate(" + that.xScale(d.Key) + ",0)"; });
 
                 items.selectAll("rect.predicted")
                    .attr("opacity", 0.5)
-                   .attr("y", function (d) {
-                       return h - me.yScale(d.Predicted) + 20;
-                   })
-                   .attr("width", me.xScale.rangeBand())
-                   .attr("height", function (d) {
-                       return me.yScale(d.Predicted);
-                   })
+                   .attr("width", that.xScale.rangeBand())
                    .attr("fill", function (d) {
-                       return me.color;
+                       return that.color;
+                   })
+                    .transition()
+                    .duration(500)
+                   .attr("height", function (d) {
+                       return that.yScale(d.Predicted);
+                   })
+                   .attr("y", function (d) {
+                       return h - that.yScale(d.Predicted) + 20;
                    });
 
                 items.selectAll("rect.value")
-                   .attr("y", function (d) {
-                       return h - me.yScale(d.Value) + 20;
-                   })
-                   .attr("width", me.xScale.rangeBand())
-                   .attr("height", function (d) {
-                       return me.yScale(d.Value);
-                   })
+                   .attr("width", that.xScale.rangeBand())
                    .attr("fill", function (d) {
-                       return me.color;
+                       return that.color;
+                   })
+                    .transition()
+                    .duration(500)
+                   .attr("height", function (d) {
+                       return that.yScale(d.Value);
+                   })
+                   .attr("y", function (d) {
+                       return h - that.yScale(d.Value) + 20;
                    });
 
                 //Create labels
                 items
                    .selectAll("text")
-                   .html(me.label)
-                   .attr("style", me.labelStyle)
+                   .html(that.label)
+                   .attr("style", that.labelStyle)
                    .attr("x", function (d, i) {
-                       return me.xScale.rangeBand() / 2;
+                       return that.xScale.rangeBand() / 2;
                    })
+                    .transition()
+                    .duration(500)
                    .attr("y", function (d) {
-                       return h - me.yScale(Math.max(d.Predicted, d.Value)) - 5 + 20;
+                       return h - that.yScale(Math.max(d.Predicted, d.Value)) - 5 + 20;
                    })
                    .attr("class", "label")
                    .selectAll("tspan")
                     .attr("x", function (d, i) {
-                        return me.xScale.rangeBand() / 2;
+                        return that.xScale.rangeBand() / 2;
                     });
             },
             eventsEnter: function () {
-                var me = this;
+                var that = this;
                 //Width and height
-                var footer = 150;
-                var w = this.width - 40;
-                var h = this.height - footer - 40;
+                var footer = that.footerHeight;
+                var w = that.innerWidth;
+                var h = that.graphHeight;
 
-                var events = me.svg.selectAll(".event")
-                   .data(me.events)
+                var events = that.svg.selectAll(".event")
+                   .data(that.events, that.key)
                    .enter()
                    .append("g")
                    .attr("class", "event ");
@@ -302,61 +292,55 @@
                 events.append("text")
                    .attr("class", "label");
 
-                me.eventsUpdate();
+                that.eventsUpdate();
             },
             eventsUpdate: function () {
-                var me = this;
+                var that = this;
                 //Width and height
-                var footer = 150;
-                var w = this.width - 40;
-                var h = this.height - footer - 40;
+                var footer = that.footerHeight;
+                var w = that.innerWidth;
+                var h = that.graphHeight;
 
-                var events = me.svg.selectAll(".event")
+                var events = that.svg.selectAll(".event")
                    .attr("class", function (d) {
                        return "event " + (d.Type || "").toLowerCase();
-                   })
-                   .attr("transform", function (d, i) { return "translate(" + me.eventXFrom(d) + ",0)"; });
+                   });
+                events.transition()
+                    .duration(500)
+                   .attr("transform", function (d, i) { return "translate(" + that.eventXFrom(d) + ",0)"; });
 
                 events.select("rect.bar")
-                   .attr("y", function (d) {
-                       var w = me.eventXTo(d) - me.eventXFrom(d);
-                       return w <= 0 ? h + 20 : 0;
-                   })
-                   .attr("class", "bar")
                    .attr("opacity", function (d) {
-                       var w = me.eventXTo(d) - me.eventXFrom(d);
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
                        return w <= 0 ? 1 : 0.3;
                    })
+                   .attr("fill", function (d) { return (d.Type || "").toLowerCase() == "critical" ? "red" : "#a3a3a3"; })
+                    .transition()
+                    .duration(500)
                    .attr("width", function (d) {
-                       var w = me.eventXTo(d) - me.eventXFrom(d);
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
                        return w <= 0 ? 5 : w;
                    })
+                   .attr("y", function (d) {
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
+                       return w <= 0 ? h + 20 : 0;
+                   })
                    .attr("height", function (d) {
-                       var w = me.eventXTo(d) - me.eventXFrom(d);
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
                        if (w <= 0) {
                            return footer / 2
                        }
                        return h + footer / 2;
-                   })
-                   .attr("fill", function (d) { return (d.Type || "").toLowerCase() == "critical" ? "red" : "#a3a3a3"; });
+                   });
 
                 events.select("g.label")
                    .attr("transform", function (d, i) { return "translate(0," + (h + footer / 2) + ")"; });
 
-                //events.select("rect.name")
-                //.attr("y", h + footer / 2)
-                //.attr("width", function (d) {
-                //    var w = me.eventXTo(d) - me.eventXFrom(d);
-                //    return me.eventXTo(d) - me.eventXFrom(d);
-                //})
-                //.attr("height", footer / 8)
-                //.attr("fill", "#70707f");
-
                 events.select("text.label")
                    .attr("fill", "white")
-                   .attr("style", me.labelStyle)
+                   .attr("style", that.labelStyle)
                    .attr("x", function (d) {
-                       var w = me.eventXTo(d) - me.eventXFrom(d);
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
                        return w <= 0 ? 0 : w / 2;
                    })
                    .attr("y", "1.2em")
@@ -385,6 +369,7 @@
                     newEvents
                         .forEach(function (d, i) {
                             var text = d3.select(d[0][0].parentNode).select("text");
+                            console.warn(text);
                             var x = text.attr("x");
                             var width = text[0][0].clientWidth * 1.5;
                             var height = text[0][0].clientHeight * 1.5;
@@ -396,8 +381,8 @@
                         });
                 }, 100);
 
-                me.svg.selectAll("g.item, g.event").sort(function (a, b) {
-                    return -me.events.indexOf(b);
+                that.svg.selectAll("g.item, g.event").sort(function (a, b) {
+                    return -that.events.indexOf(b);
                 });
             }
         });

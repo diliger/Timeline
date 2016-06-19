@@ -28,8 +28,6 @@
             <button value="{{model.AddEvent$::click}}" onclick="++this.value;" style="background-color:#c6c6f0;">Add event!</button>
         </div>
         <br/>
-        <timeline-element name="Timeline-Name" description="Timeline-Description" items="{{model.Dataset.Items}}" events="{{model.Dataset.Events}}" height="480" width="1280"></timeline-element>
-
-        <dom-bind-notifier path="model" observed-object="{{model}}" deep></dom-bind-notifier>
+        <timeline-element name="Timeline-Name" description="Timeline-Description" items="{{model.Dataset.Items}}" events="{{model.Dataset.Events}}" height="480" width="1200"></timeline-element>
     </template>
 </template>
