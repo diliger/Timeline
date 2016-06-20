@@ -58,10 +58,12 @@
             axisLabelStyle: ["fill: white;",
                             "stroke: #FFF;",
                             "shape-rendering: crispEdges;"].join(""),
+            labelsMap: {},
             initChart: function () {
                 if (!this.attachedFired)
                     return;
                 var that = this;
+                timeline = this;
 
                 //Width and height
                 var footer = that.footerHeight;
@@ -95,7 +97,7 @@
                                 .range([0, h]);
 
                 that.eventXFrom = function (d, i) { return d.From % 1 == 0 ? that.xScale(d.From + 1) : that.xEventScale(d.From); };
-                that.eventXTo = function (d, i) { return d.To % 1 == 0 ? that.xScale(d.To) + that.xScale.rangeBand() : that.xEventScale(d.To); };
+                that.eventXTo = function (d, i) { return d.To > 0 && d.To % 1 == 0 ? that.xScale(d.To) + that.xScale.rangeBand() : that.xEventScale(d.To); };
 
                 that.xAxis = d3.svg.axis()
                     .scale(that.xScale)
@@ -162,9 +164,9 @@
 
                 //Exit…
                 items.exit()
-                    .transition()
-                    .duration(500)
-                    .attr("transform", function (d, i) { return "translate(" + -that.xScale.rangeBand() + ",0)"; })  // <-- Exit stage left
+                    //.transition()
+                    //.duration(500)
+                    //.attr("transform", function (d, i) { return "translate(" + -that.xScale.rangeBand() + ",0)"; })  // <-- Exit stage left
                     .remove();
 
                 that.itemsEnter();
@@ -192,13 +194,16 @@
                    .data(that.items, that.key)
                    .enter()
                    .append("g")
-                   .attr("class", "item");
+                   .attr("class", "item")
+                   .attr("transform", function (d, i) { return "translate(" + that.xScale(d.Key) + ",0)"; });
 
                 items.append("rect")
-                   .attr("class", "predicted");
+                   .attr("class", "predicted")
+                   .attr("width", 0);
 
                 items.append("rect")
-                   .attr("class", "value");
+                   .attr("class", "value")
+                   .attr("width", 0);
 
                 //Create labels
                 items.append("text")
@@ -213,19 +218,21 @@
                 var w = that.innerWidth;
                 var h = that.graphHeight;
 
-                var items = that.svg.selectAll(".item")
-                   //.data(that.items, that.key)
-                   .attr("class", "item")
-                   .attr("transform", function (d, i) { return "translate(" + that.xScale(d.Key) + ",0)"; });
+                var items = that.svg.selectAll(".item");
+
+                items
+                    .transition()
+                    .duration(500)
+                    .attr("transform", function (d, i) { return "translate(" + that.xScale(d.Key) + ",0)"; });
 
                 items.selectAll("rect.predicted")
                    .attr("opacity", 0.5)
-                   .attr("width", that.xScale.rangeBand())
                    .attr("fill", function (d) {
                        return that.color;
                    })
                     .transition()
                     .duration(500)
+                   .attr("width", that.xScale.rangeBand())
                    .attr("height", function (d) {
                        return that.yScale(d.Predicted);
                    })
@@ -234,12 +241,12 @@
                    });
 
                 items.selectAll("rect.value")
-                   .attr("width", that.xScale.rangeBand())
                    .attr("fill", function (d) {
                        return that.color;
                    })
                     .transition()
                     .duration(500)
+                   .attr("width", that.xScale.rangeBand())
                    .attr("height", function (d) {
                        return that.yScale(d.Value);
                    })
@@ -277,7 +284,8 @@
                    .data(that.events, that.key)
                    .enter()
                    .append("g")
-                   .attr("class", "event ");
+                   .attr("class", "event ")
+                   .attr("x", function (d, i) { return that.eventXFrom(d); });
 
                 events.append("rect")
                    .attr("class", "bar")
@@ -304,9 +312,10 @@
                 var events = that.svg.selectAll(".event")
                    .attr("class", function (d) {
                        return "event " + (d.Type || "").toLowerCase();
-                   });
+                   })
+                   .attr("x", function (d, i) { return that.eventXFrom(d); });
                 events.transition()
-                    .duration(500)
+                    .duration(250)
                    .attr("transform", function (d, i) { return "translate(" + that.eventXFrom(d) + ",0)"; });
 
                 events.select("rect.bar")
@@ -346,44 +355,84 @@
                    .attr("y", "1.2em")
                    .text(function (d) { return d.Name; });
 
-                var newEvents = [];
+                //var newEvents = [];
                 events.select("rect.name")
                     .each(function (d, i, c) {
-                        var text = d3.select(this.parentNode).select("text");
-                        var x = text.attr("x") * 1;
+                        var event = d3.select(this.parentNode.parentNode);
+                        var label = d3.select(this.parentNode);
+                        var text = label.select("text");
                         var width = text[0][0].clientWidth * 1.5;
                         var height = text[0][0].clientHeight * 1.5;
-                        if (width == 0 || height == 0 || !(x > 0)) {
-                            newEvents.push(d3.select(this));
-                            //.attr("opacity", 0);
-                            return;
-                        }
+                        var x = text.attr("x") * 1 - width / 2;
+
+                        var eventX = event.attr("x") * 1;
+                        var labelX1 = eventX + x;
+                        var labelX2 = labelX1 + width;
+                        label.attr("x1", labelX1)
+                             .attr("x2", labelX2);
+
+                        var pos = that.labelsMap["event" + d.Key] = that.labelsMap["event" + d.Key] || { key: d.Key, data: d };
+                        pos.x1 = labelX1;
+                        pos.x2 = labelX2;
+                        pos.y = 0;
+
                         d3.select(this)
                             .attr("width", width)
-                            .attr("x", x - width / 2)
+                            .attr("x", x)
                             .attr("height", height)
                             .attr("fill", "#70707f");
                     });
 
-                setTimeout(function () {
-                    newEvents
-                        .forEach(function (d, i) {
-                            var text = d3.select(d[0][0].parentNode).select("text");
-                            console.warn(text);
-                            var x = text.attr("x");
-                            var width = text[0][0].clientWidth * 1.5;
-                            var height = text[0][0].clientHeight * 1.5;
-                            d
-                                .attr("width", width)
-                                .attr("x", x - width / 2)
-                                .attr("height", height)
-                                .attr("fill", "#70707f");
-                        });
-                }, 100);
+                that.calcLabelsY();
+
+                //if (that.timeout) {
+                //    clearTimeout(that.timeout);
+                //    that.timeout = null;
+                //}
+                //that.timeout = setTimeout(function () {
+                //    newEvents
+                //        .forEach(function (d, i) {
+                //            var text = d3.select(d[0][0].parentNode).select("text");
+                //            console.warn(text);
+                //            var x = text.attr("x");
+                //            var width = text[0][0].clientWidth * 1.5;
+                //            var height = text[0][0].clientHeight * 1.5;
+                //            d
+                //                .attr("width", width)
+                //                .attr("x", x - width / 2)
+                //                .attr("height", height)
+                //                .attr("fill", "#70707f");
+                //        });
+                //    that.timeout = null;
+                //}, 100);
 
                 that.svg.selectAll("g.item, g.event").sort(function (a, b) {
                     return -that.events.indexOf(b);
                 });
+            },
+            calcLabelsY: function () {
+                var that = this;
+
+                for (var i in that.labelsMap) {
+                    var p = that.labelsMap[i];
+                    if (!p || !p.key)
+                        continue;
+                    that.calcLabelY(p);
+                }
+            },
+            calcLabelY: function (pos) {
+                var that = this;
+                pos.y = 0;
+                for (var i in that.labelsMap) {
+                    var p = that.labelsMap[i];
+                    if (!p || !p.key)
+                        continue;
+                    if (p == pos)
+                        return;
+                    if (p.y == pos.y && (p.x1 >= pos.x1 && p.x1 <= pos.x2 || pos.x1 >= p.x1 && pos.x1 <= p.x2)) {
+                        pos.y += 1;
+                    }
+                }
             }
         });
     </script>

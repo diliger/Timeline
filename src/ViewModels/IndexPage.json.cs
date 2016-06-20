@@ -20,7 +20,7 @@ namespace Timeline {
             //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event" + (Dataset.Events.Count + 1), "Normal", 0M, 1M);
             //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event AAA " + (Dataset.Events.Count + 1), "Critical", 1.7M, 2M);
             //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event BB" + (Dataset.Events.Count + 1), "Normal", 2.1M, 2.3M);
-            //Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event CCCC " + (Dataset.Events.Count + 1), "Normal", 2.5M, 2.5M);
+            Dataset.Events.Add().Data = new TimelineEvent(Dataset.Items.Count, "Event CCCC " + (Dataset.Events.Count + 1), "Normal", 2.5M, 2.5M);
         }
 
         void Handle(Input.AddItem action) {
@@ -65,7 +65,7 @@ namespace Timeline {
         }
 
         void Handle(Input.UpdateEvent action) {
-            int count = Dataset.Events.Count;
+            int count = Dataset.Events.Count - 1;
             if (count == 0)
                 return;
             int i = r.Next(count);
