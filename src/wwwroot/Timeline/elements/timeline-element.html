@@ -385,29 +385,10 @@
 
                 that.calcLabelsY();
 
-                //if (that.timeout) {
-                //    clearTimeout(that.timeout);
-                //    that.timeout = null;
-                //}
-                //that.timeout = setTimeout(function () {
-                //    newEvents
-                //        .forEach(function (d, i) {
-                //            var text = d3.select(d[0][0].parentNode).select("text");
-                //            console.warn(text);
-                //            var x = text.attr("x");
-                //            var width = text[0][0].clientWidth * 1.5;
-                //            var height = text[0][0].clientHeight * 1.5;
-                //            d
-                //                .attr("width", width)
-                //                .attr("x", x - width / 2)
-                //                .attr("height", height)
-                //                .attr("fill", "#70707f");
-                //        });
-                //    that.timeout = null;
-                //}, 100);
-
                 that.svg.selectAll("g.item, g.event").sort(function (a, b) {
-                    return -that.events.indexOf(b);
+                    var a = -that.events.indexOf(a);
+                    var b = -that.events.indexOf(b);
+                    return a < b;
                 });
             },
             calcLabelsY: function () {

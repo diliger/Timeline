@@ -3,7 +3,7 @@ using System;
 using System.Linq;
 
 namespace Timeline {
-    partial class IndexPage : Partial {
+    partial class IndexPage : Json {
         Random r = new Random();
         int max = 100;
 
