@@ -318,33 +318,6 @@
                     .duration(250)
                    .attr("transform", function (d, i) { return "translate(" + that.eventXFrom(d) + ",0)"; });
 
-                events.select("rect.bar")
-                   .attr("opacity", function (d) {
-                       var w = that.eventXTo(d) - that.eventXFrom(d);
-                       return w <= 0 ? 1 : 0.3;
-                   })
-                   .attr("fill", function (d) { return (d.Type || "").toLowerCase() == "critical" ? "red" : "#a3a3a3"; })
-                    .transition()
-                    .duration(500)
-                   .attr("width", function (d) {
-                       var w = that.eventXTo(d) - that.eventXFrom(d);
-                       return w <= 0 ? 5 : w;
-                   })
-                   .attr("y", function (d) {
-                       var w = that.eventXTo(d) - that.eventXFrom(d);
-                       return w <= 0 ? h + 20 : 0;
-                   })
-                   .attr("height", function (d) {
-                       var w = that.eventXTo(d) - that.eventXFrom(d);
-                       if (w <= 0) {
-                           return footer / 2
-                       }
-                       return h + footer / 2;
-                   });
-
-                events.select("g.label")
-                   .attr("transform", function (d, i) { return "translate(0," + (h + footer / 2) + ")"; });
-
                 events.select("text.label")
                    .attr("fill", "white")
                    .attr("style", that.labelStyle)
@@ -355,7 +328,6 @@
                    .attr("y", "1.2em")
                    .text(function (d) { return d.Name; });
 
-                //var newEvents = [];
                 events.select("rect.name")
                     .each(function (d, i, c) {
                         var event = d3.select(this.parentNode.parentNode);
@@ -384,6 +356,34 @@
                     });
 
                 that.calcLabelsY();
+
+                events.select("rect.bar")
+                   .attr("opacity", function (d) {
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
+                       return w <= 0 ? 1 : 0.3;
+                   })
+                   .attr("fill", function (d) { return (d.Type || "").toLowerCase() == "critical" ? "red" : "#a3a3a3"; })
+                    .transition()
+                    .duration(500)
+                   .attr("width", function (d) {
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
+                       return w <= 0 ? 5 : w;
+                   })
+                   .attr("y", function (d) {
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
+                       return w <= 0 ? h + 20 : 0;
+                   })
+                   .attr("height", function (d) {
+                       var map = that.labelsMap["event" + d.Key];
+                       var w = that.eventXTo(d) - that.eventXFrom(d);
+                       if (w <= 0) {
+                           return footer / 2 + 30 * map.y;
+                       }
+                       return h + footer / 2 + 30 * map.y;
+                   });                    
+
+                events.select("g.label")
+                   .attr("transform", function (d, i) { var map = that.labelsMap["event" + d.Key]; return "translate(0," + (h + footer / 2 + 30 * map.y) + ")"; });
 
                 that.svg.selectAll("g.item, g.event").sort(function (a, b) {
                     var a = -that.events.indexOf(a);
